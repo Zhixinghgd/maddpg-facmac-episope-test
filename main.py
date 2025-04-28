@@ -101,7 +101,8 @@ if __name__ == '__main__':
                 action = {agent_id: env.action_space(agent_id).sample() 
                         for agent_id in env.agents}
             else:
-                action = maddpg.select_action(obs, last_action)
+                # action = maddpg.select_action(obs, last_action)
+                action = maddpg.select_action_noise(obs, last_action)
             
             # 执行动作并获取环境反馈
             # 注意: 这里的total_reward是环境直接返回的追逐者团队总体奖励

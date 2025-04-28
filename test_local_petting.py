@@ -57,7 +57,8 @@ def get_env(env_name, ep_len=25):
 
 env, dim_info, num_good, num_adversaries= get_env('simple_tag_v2', 25)
 print(dim_info)
-print("adversary_0 action space:", env.action_space("adversary_0"))
+print("adversary_0 action space:", env.action_space("adversary_0").low)
+print("action space:", env.action_space)
 obs = env.reset()
 action = {agent_id: env.action_space(agent_id).sample()
                         for agent_id in env.agents}

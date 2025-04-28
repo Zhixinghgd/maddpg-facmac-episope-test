@@ -36,7 +36,7 @@ smooth_agent = smooth_curve(mean_agent, window)
 
 # Adversary组（新计算逻辑）
 sum_other = np.sum(other_rewards, axis=0) if other_rewards else np.zeros_like(total_rewards)
-# combined_adv = sum_other * 0.5 + total_rewards * 0.5  # 组合公式
+# combined_adv = sum_other * 0.7 + total_rewards * 0.3  # 组合公式
 combined_adv = total_rewards # 组合公式
 smooth_combined_adv = smooth_curve(combined_adv, window)
 

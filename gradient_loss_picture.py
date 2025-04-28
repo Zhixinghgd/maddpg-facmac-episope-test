@@ -117,5 +117,5 @@ def plot_all_metrics(result_dir):
 
 
 if __name__ == '__main__':
-    result_dir = './results/simple_tag_v2/3'  # 修改为你的实际路径
+    result_dir = './results/simple_tag_v2/5'  # 修改为你的实际路径
     plot_all_metrics(result_dir)

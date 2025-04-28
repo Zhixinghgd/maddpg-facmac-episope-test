@@ -191,6 +191,7 @@ class MADDPG:
         使用所有智能体的actor网络选择动作，并添加高斯噪声
         """
         actions = {}
+        eps = 1e-6
         for agent_id in self.agent_ids:
             o = torch.from_numpy(obs[agent_id]).unsqueeze(0).float()
             la = torch.from_numpy(last_action[agent_id]).unsqueeze(0).float()
@@ -205,8 +206,11 @@ class MADDPG:
             noise = np.random.normal(0, self.noise_std, size=act.shape)
             act_noisy = act + noise
             # 裁剪到动作空间范围 [0, 1]（根据环境实际范围调整）
-            act_noisy = np.clip(act_noisy, 0.01, 0.99)
-            actions[agent_id] = act_noisy
+            act_noisy = np.clip(act_noisy, 0 + eps , 1 - eps)
+            action_arr = np.asarray(act_noisy, dtype=np.float32)
+            assert isinstance(action_arr, np.ndarray)
+            actions[agent_id] = action_arr
+            # actions[agent_id] = act_noisy
 
             self.logger.info(f'{agent_id} action: {actions[agent_id]}')
 
