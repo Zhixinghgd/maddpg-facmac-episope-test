@@ -53,10 +53,12 @@ if __name__ == '__main__':
                         choices=['simple_adversary_v2', 'simple_spread_v2', 'simple_tag_v2', 'simple_world_comm_v2'])
     parser.add_argument('--episode_num', type=int, default=80000,
                         help='total episode num during training procedure')
+    # parser.add_argument('--warm_episode', type=int, default=20000,
+    #                     help='warm setup episode num during training procedure')
     parser.add_argument('--episode_length', type=int, default=25, help='steps per episode')
-    parser.add_argument('--learn_interval', type=int, default=5,
+    parser.add_argument('--learn_interval', type=int, default=4,
                         help='episodes interval between learning time')
-    parser.add_argument('--random_episodes', type=int, default=2000,
+    parser.add_argument('--random_episodes', type=int, default=4000,
                         help='random episodes before the agent start to learn')
     parser.add_argument('--tau', type=float, default=0.02, help='soft update parameter')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
@@ -77,6 +79,9 @@ if __name__ == '__main__':
     env, dim_info, num_good, num_adversaries = get_env(args.env_name, args.episode_length)
     maddpg = MADDPG(dim_info, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr,
                     result_dir, num_good, num_adversaries)
+
+    # 在创建maddpg实例后，加载预训练的好智能体模型
+    maddpg.load_good_agent(os.path.join('./results/simple_tag_v2/2', 'model.pt'))
 
     episode_count = 0  # Track episodes
     agent_num = env.num_agents
@@ -99,11 +104,11 @@ if __name__ == '__main__':
             # Select actions - either random during initial exploration or from policy
             if episode < args.random_episodes:
                 action = {agent_id: env.action_space(agent_id).sample() 
-                        for agent_id in env.agents}
+                          for agent_id in env.agents}
             else:
                 # action = maddpg.select_action(obs, last_action)
                 action = maddpg.select_action_noise(obs, last_action)
-            
+
             # 执行动作并获取环境反馈
             # 注意: 这里的total_reward是环境直接返回的追逐者团队总体奖励
             next_obs, reward, total_reward, done, info = env.step(action)
@@ -129,7 +134,8 @@ if __name__ == '__main__':
         # 在随机探索期之后，每隔learn_interval个episode进行一次学习
         if episode >= args.random_episodes and episode % args.learn_interval == 0:
             # maddpg.learn(args.batch_size, args.gamma)
-            maddpg.qmix_learn(args.batch_size, args.gamma)
+            # maddpg.qmix_learn(args.batch_size, args.gamma)
+            maddpg.no_taopao_qmix_learn(args.batch_size, args.gamma)
             # maddpg.maddpg_learn(args.batch_size, args.gamma)
             maddpg.update_target(args.tau)
         

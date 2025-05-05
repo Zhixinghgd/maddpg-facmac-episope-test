@@ -128,16 +128,45 @@ class Scenario(BaseScenario):
         # 1) 碰撞奖励
         collision = 0.0
         rew = 0
+        proximity_reward = 0
+
         for ag in self.good_agents(world):
             for adv in self.adversaries(world):
                 if self.is_collision(ag, adv):
                     collision += 10.0
 
+        # agents = self.good_agents(world)
+        # adversaries = self.adversaries(world)
+        # adv_per_agent = len(adversaries) // len(agents)  # 每个逃跑者分配的基准追逐者数量
+        #
+        # # --- 核心修改1：基于距离的密集奖励 ---
+        # for agent in agents:
+        #     # 计算当前逃跑者到所有追逐者的距离，并排序
+        #     distances = sorted([
+        #         np.linalg.norm(agent.state.p_pos - adv.state.p_pos)
+        #         for adv in adversaries
+        #     ])
+        #
+        #     # 每个逃跑者分配给最近的 (adv_per_agent) 个追逐者
+        #     assigned_distances = distances[:(adv_per_agent + 1)] if distances else []
+        #     # assigned_distances = distances[:adv_per_agent] if distances else []
+        #     # 分层距离奖励（越近奖励越高）不合理！
+        #     for d in assigned_distances:
+        #         if 0.0 <= d < 0.5:  # 第一层：极近距离
+        #             proximity_reward += 5 * (0.5 - d)
+        #         elif 0.5 <= d < 1.0:  # 第二层：有效包围距离
+        #             proximity_reward += 3 * (1.0 - d)
+        #         elif 1.0 <= d < 2.0:  # 第三层：追踪距离
+        #             proximity_reward += 0.5 * (2.0 - d)
+        #         else:  # 超出有效范围不奖励
+        #             pass
+
+
         # 2) shaping：所有追逐者追离他最近的逃跑者都会有奖励
         for adv in self.adversaries(world):
             rew -= 0.1 * min([np.sqrt(np.sum(np.square(a.state.p_pos - adv.state.p_pos))) for a in self.good_agents(world)])
 
-        # return collision
+        # return proximity_reward
         return collision + rew
 
 
@@ -178,8 +207,8 @@ class Scenario(BaseScenario):
     def agent_reward(self, agent, world):
         # Agents are negatively rewarded if caught by adversaries
         rew = 0
-        # shape = False
-        shape = True  # 启用形状奖励
+        shape = False
+        # shape = True  # 启用形状奖励
         adversaries = self.adversaries(world)
         if (
             shape
@@ -192,6 +221,33 @@ class Scenario(BaseScenario):
             for a in adversaries:
                 if self.is_collision(a, agent):
                     rew -= 10
+        # # 2) 逃跑方向奖励
+        # #
+        # # 对每个距离 <= 3 的追逐者：
+        # #   计算 v_i = agent.pos - pursuer.pos
+        # #   d_i = ||v_i||
+        # #   构造向量 u_i = (3 - d_i) * (v_i / d_i)
+        # # 合成 V = sum_i u_i
+        # # 当前速度 u = agent.state.p_vel
+        # # 奖励 = u · V
+        # #
+        # V = np.zeros(world.dim_p, dtype=np.float32)
+        # for ag in adversaries:
+        #     delta = agent.state.p_pos - ag.state.p_pos  # v_i
+        #     dist = np.linalg.norm(delta)
+        #     if dist > 0 and dist <= 3.0:
+        #         # 权重长度 = 3 - dist
+        #         weight = 3.0 - dist
+        #         # 单位方向
+        #         dir_vec = delta / dist
+        #         # 加入合成向量
+        #         V += weight * dir_vec
+        #
+        # # 当前速度向量
+        # u = agent.state.p_vel
+        # # 投影奖励
+        # direction_reward = np.dot(u, V)
+        # rew += direction_reward
 
         # agents are penalized for exiting the screen, so that they can be caught by the adversaries
         def bound(x):
@@ -240,7 +296,7 @@ class Scenario(BaseScenario):
                 np.sqrt(np.sum(np.square(a.state.p_pos - agent.state.p_pos)))
                 for a in agents
             )
-            rew -= 0.3 * min_distance  # 距离越近，惩罚越小（奖励越大）
+            rew -= 0.2 * min_distance  # 距离越近，惩罚越小（奖励越大）
 
         # 碰撞奖励（原始逻辑）
         if agent.collide:
